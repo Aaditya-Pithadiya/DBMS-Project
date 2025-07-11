@@ -174,46 +174,6 @@ GROUP BY Player_ID
 GROUP BY Player_ID,Player_name
 HAVING sum(Total_Runs)>=1500 AND sum(Total_Wickets)>=60;
 
--- list out all umpires who have umpired(As on_field_umpire1, on_field_umpire2 and TV_umpire) in most matches of india 
-
-SELECT Umpire_ID,Umpire_name FROM Umpire  NATURAL JOIN
-(
-SELECT Umpire_ID,sum(cnt1) as cnt FROM
-(
-SELECT On_field_umpire1 AS Umpire_ID, count(Match_ID) AS cnt1
-FROM Matches_of_Event
-WHERE Team1 = 'BCCI' OR Team2 = 'BCCI'
-GROUP BY On_field_umpire1
-UNION ALL
-SELECT On_field_umpire1 AS Umpire_ID,count(Match_ID)
-FROM Bilateral_Participation NATURAL JOIN Matches_of_Bilateral_series
-WHERE Bilateral_ID = 'BCCI'
-GROUP BY On_field_umpire1
-UNION ALL
-SELECT On_field_umpire2 AS Umpire_ID, count(Match_ID)
-FROM Matches_of_Event
-WHERE Team1 = 'BCCI' OR Team2 = 'BCCI'
-GROUP BY On_field_umpire2
-UNION ALL
-SELECT On_field_umpire2 AS Umpire_ID,count(Match_ID)
-FROM Bilateral_Participation NATURAL JOIN Matches_of_Bilateral_series
-WHERE Bilateral_ID = 'BCCI'
-GROUP BY On_field_umpire2
-UNION ALL    
-SELECT TV_umpire AS Umpire_ID, count(Match_ID)
-FROM Matches_of_Event
-WHERE Team1 = 'BCCI' OR Team2 = 'BCCI'
-GROUP BY TV_umpire
-UNION ALL
-SELECT TV_umpire AS Umpire_ID,count(Match_ID)
-FROM Bilateral_Participation NATURAL JOIN Matches_of_Bilateral_series
-WHERE Bilateral_ID = 'BCCI'
-GROUP BY TV_umpire
-) AS r1
-GROUP BY Umpire_ID ) as r2
-ORDER BY cnt 
-DESC LIMIT 1;
-
 --list all the male players who have played less than 2 world cups
 
 SELECT Player_ID,Player_Name FROM
@@ -226,35 +186,6 @@ HAVING count (Event_ID) > 2)
 )
 NATURAL JOIN Player
 WHERE Gender='Male';
-
--- list players whenever he/she played in event, in that event his/her board always got first rank
-
-SELECT Player_id , Player_name FROM Player NATURAL JOIN 
-( SELECT Player_id FROM
-(SELECT Board_ID,Count(Event_ID) AS No_of_cups FROM
-( SELECT Event_ID, Board_ID FROM Event_Participation 
-WHERE Rank=1 and substring(Event_ID,1,3)='MWC') AS r
-GROUP BY Board_ID) AS Q1
-NATURAL JOIN
-(SELECT Player_id,Board_id,count(Event_id) AS champion FROM
-(SELECT Event_ID, Board_ID,player_id FROM Event_Player_data 
-NATURAL JOIN Event_Participation 
-WHERE Rank=1) AS r
-GROUP BY Player_id,Board_iD) AS Q2
-WHERE No_of_cups=Champion
-UNION
-SELECT Player_id FROM
-(SELECT Board_ID,Count(Event_ID) AS No_of_cups FROM
-( SELECT Event_ID, Board_ID FROM Event_Participation 
-WHERE Rank=1 and substring(Event_ID,1,3)='WWC') AS r
-GROUP BY Board_ID) AS Q1
-NATURAL JOIN
-(SELECT Player_id,Board_id,count(Event_id) AS champion FROM
-(SELECT Event_ID, Board_ID,player_id FROM Event_Player_data 
-NATURAL JOIN Event_Participation 
-WHERE Rank=1) AS r
-GROUP BY Player_id,Board_iD) AS Q2
-WHERE No_of_cups=Champion ) AS Q
 
 --list player id who wins most awards till now
 
@@ -326,32 +257,6 @@ SELECT Venue as Stadium_id
 FROM Matches_of_Event
 ) 
 
--- List Player id who took most wicket per year 
-
-SELECT player_id,player_name,Q.year, Q.Wickets FROM
-(SELECT Q1.year , Player_id , Q1.Wickets FROM
-(SELECT year , max(Wickets) AS Wickets FROM
-(SELECT Player_id,year , sum(Total_Wickets) AS Wickets FROM
-(SELECT Player_id,year ,Match_type, Total_Wickets FROM 
-Event NATURAL JOIN Event_Player_Data 
-UNION ALL
-SELECT Player_id,year ,Match_type, Total_Wickets FROM 
-Bilateral_Series NATURAL JOIN Bilateral_Player_Data  )GROUP BY Player_id,year)
-GROUP BY year) AS Q1
-JOIN 
-(SELECT Player_id,year , sum(Total_Wickets) AS Wickets FROM
-(SELECT Player_id,year ,Match_type, Total_Wickets FROM 
- Event NATURAL JOIN Event_Player_Data 
- UNION ALL
- SELECT Player_id,year ,Match_type, Total_Wickets FROM 
- Bilateral_Series NATURAL JOIN Bilateral_Player_Data  )
- GROUP BY Player_id,year) AS Q2
- ON Q1.year = Q2.year AND Q1.Wickets = Q2.Wickets 
- ORDER BY Q1.year ASC)AS Q 
- NATURAL JOIN player;
-
-
-
 -- find non indian umpire_id, umpire_name, country who have decision accuracy more than 85 and  
 -- umpired in  match of events where runner up is India 
 
@@ -400,30 +305,6 @@ Player NATURAL JOIN
 (SELECT Player_ID from Player 
 WHERE (Batting_style = 'Right-handed' AND Bowling_style LIKE '%Left-arm%') OR 
 (Batting_style = 'Left-handed' AND Bowling_style LIKE '%Right-arm%') ) as r; 
-
--- Find out all the stadiums where India has player matches and give count of wins on that stadium. 
-
-select r1.stadium_id, no_of_matches,wins from 
-(SELECT venue as stadium_id,count(*) as no_of_matches FROM (
-SELECT Match_ID,Venue,Winner FROM Matches_of_Event 
-WHERE Team1 = 'BCCI' OR Team2 = 'BCCI'
-UNION ALL 
-SELECT Match_ID,Venue,Winner FROM Matches_of_Bilateral_series 
-NATURAL JOIN Bilateral_Participation  
-WHERE  Board_ID = 'BCCI' ) as r 
-GROUP BY venue) as r1 
-LEFT JOIN
-(
-( SELECT venue as stadium_id, count(*) as wins,winner FROM 
-(SELECT Match_ID,Venue,Winner FROM Matches_of_Event 
-WHERE Team1 = 'BCCI' OR Team2 = 'BCCI'
-UNION ALL 
-SELECT Match_ID,Venue,Winner FROM Matches_of_Bilateral_series 
-NATURAL JOIN Bilateral_Participation  
-WHERE  Board_ID = 'BCCI') as r 
-GROUP BY venue,winner 
-HAVING winner='BCCI' ) ) as r2
-ON r1.stadium_id=r2.stadium_id; 
 
 -- Print out all the bilateral_id, event_id where host country is the winner 
 
